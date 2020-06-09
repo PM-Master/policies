@@ -311,7 +311,7 @@ public class ConsentPolicy {
                         "        - assign to\n" +
                         "      target:\n" +
                         "        policyElements:\n" +
-                        "          - dac_users\n" +
+                        "          - name: dac_users\n" +
                         "    response:\n" +
                         "      actions:\n" +
                         "        - function:\n" +
