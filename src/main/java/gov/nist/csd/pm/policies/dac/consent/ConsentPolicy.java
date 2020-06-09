@@ -312,6 +312,7 @@ public class ConsentPolicy {
                         "      target:\n" +
                         "        policyElements:\n" +
                         "          - name: dac_users\n" +
+                        "            type: UA\n" +
                         "    response:\n" +
                         "      actions:\n" +
                         "        - function:\n" +
