@@ -58,14 +58,14 @@ public class ConsentPolicy {
                 accessRequests.getName());
     }
 
-    public List<ConsentRequest> getRequesterRequests(String requester) throws PMException {
+    public List<ConsentRequest> getSentRequests(String requester) throws PMException {
         return getRequests(Node.toProperties(
                 REQUESTER_PROPERTY, requester,
                 "type", "access_request")
         );
     }
 
-    public List<ConsentRequest> getUserRequests(String user) throws PMException {
+    public List<ConsentRequest> getReceivedRequests(String user) throws PMException {
         return getRequests(Node.toProperties(
                 USER_PROPERTY, user,
                 "type", "access_request")
@@ -100,7 +100,7 @@ public class ConsentPolicy {
      * @param consenter the target of the consents to return
      * @return
      */
-    public List<Consent> getConsenterPolicies(String consenter) throws PMException {
+    public List<Consent> getSentPolicies(String consenter) throws PMException {
         List<Consent> consents = new ArrayList<>();
         // search for OA nodes with property consent=target
         Set<Node> search = graph.search(OA, Node.toProperties(CONSENTER_PROPERTY, consenter));
@@ -141,11 +141,11 @@ public class ConsentPolicy {
     }
 
     /**
-     * get the consents that the given user is the consentee of (receiving the consent).
-     * @param consentee the target of the consents to return
-     * @return the set of consents the user has been given
+     * get the consent policies the given consentee has received (requests have been approved)
+     * @param consentee the user that has received the consent policies
+     * @return the set of consents the consentee has received
      */
-    public List<Consent> getConsenteePolicies(String consentee) throws PMException {
+    public List<Consent> getReceivedPolicies(String consentee) throws PMException {
         List<Consent> consents = new ArrayList<>();
         Set<Node> search = graph.search(OA, Node.toProperties(CONSENTEE_PROPERTY, consentee));
         for (Node node : search) {
