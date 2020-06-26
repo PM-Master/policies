@@ -13,7 +13,7 @@ import gov.nist.csd.pm.pip.graph.model.nodes.Node;
 import gov.nist.csd.pm.pip.obligations.evr.EVRException;
 import gov.nist.csd.pm.pip.obligations.model.functions.Function;
 
-import static gov.nist.csd.pm.operations.Operations.ALL_OPERATIONS;
+import static gov.nist.csd.pm.operations.Operations.ALL_OPS;
 import static gov.nist.csd.pm.pip.graph.model.nodes.NodeType.OA;
 import static gov.nist.csd.pm.pip.graph.model.nodes.NodeType.UA;
 
@@ -65,9 +65,9 @@ public class ConsentEVRFunction implements FunctionExecutor {
         graph.assign(userNode.getName(), adminNode.getName());
 
         // associate the admin and the container
-        graph.associate(adminNode.getName(), cont.getName(), new OperationSet(ALL_OPERATIONS));
+        graph.associate(adminNode.getName(), cont.getName(), new OperationSet(ALL_OPS));
         // associate the admin and the group
-        graph.associate(adminNode.getName(), group.getName(), new OperationSet(ALL_OPERATIONS));
+        graph.associate(adminNode.getName(), group.getName(), new OperationSet(ALL_OPS));
 
         return null;
     }
