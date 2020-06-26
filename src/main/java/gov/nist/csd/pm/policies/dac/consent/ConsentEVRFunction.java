@@ -16,6 +16,7 @@ import gov.nist.csd.pm.pip.obligations.model.functions.Function;
 import static gov.nist.csd.pm.operations.Operations.ALL_OPS;
 import static gov.nist.csd.pm.pip.graph.model.nodes.NodeType.OA;
 import static gov.nist.csd.pm.pip.graph.model.nodes.NodeType.UA;
+import static gov.nist.csd.pm.policies.dac.consent.ConsentPolicy.GUARDIAN_PROPERTY;
 
 public class ConsentEVRFunction implements FunctionExecutor {
     @Override
@@ -63,6 +64,11 @@ public class ConsentEVRFunction implements FunctionExecutor {
         Node adminNode = graph.createNode(group.getName() + "_admin", UA, null, "DAC_default_UA");
         // assign the user to the admin
         graph.assign(userNode.getName(), adminNode.getName());
+
+        // if the user has a guardian, assign them as well
+        if (userNode.getProperties().containsKey(GUARDIAN_PROPERTY)) {
+            graph.assign(userNode.getProperties().get(GUARDIAN_PROPERTY), adminNode.getName());
+        }
 
         // associate the admin and the container
         graph.associate(adminNode.getName(), cont.getName(), new OperationSet(ALL_OPS));
