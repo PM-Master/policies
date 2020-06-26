@@ -25,6 +25,7 @@ public class ConsentPolicy {
     private static final String CONSENT_PROPERTY = "consent";
     private static final String CONSENTER_PROPERTY = "consenter";
     private static final String CONSENTEE_PROPERTY = "consentee";
+    private static final String CREATOR_PROPERTY = "creator";
     public static final String PERMISSIONS_PROPERTY = "permissions";
     private static final String NODES_PROPERTY = "nodes";
     private static final String PROHIBITIONS_PROPERTY = "prohibitions";
@@ -143,6 +144,57 @@ public class ConsentPolicy {
 
             String consentee = properties.get(CONSENTEE_PROPERTY);
             consent.setConsentee(consentee);
+            String creator = properties.get(CREATOR_PROPERTY);
+            consent.setCreator(creator);
+
+            String permsStr = properties.get(PERMISSIONS_PROPERTY);
+            String nodesStr = properties.get(NODES_PROPERTY);
+            String prosStr = properties.get(PROHIBITIONS_PROPERTY);
+
+            if (permsStr == null) {
+                continue;
+            }
+
+            OperationSet ops = new OperationSet(permsStr.split(","));
+            consent.setPermissions(ops);
+
+            if (!nodesStr.isEmpty()) {
+                String[] pieces = nodesStr.split(",");
+                for (String name : pieces) {
+                    consent.addNode(graph.getNode(name));
+                }
+            }
+
+            consent.setProhibitions(getProhibitions(consenter, consentee));
+
+            consents.add(consent);
+        }
+
+        return consents;
+    }
+
+    /**
+     * get the consent policies that the given user created
+     * @param consenter the target of the consents to return
+     * @return
+     */
+    public List<Consent> getSentCreatorPolicies(UserContext userCtx, String consenter) throws PMException {
+        Graph graph = pdp.getGraphService(userCtx);
+
+        List<Consent> consents = new ArrayList<>();
+        // search for OA nodes with property consent=target
+        Set<Node> search = graph.search(OA, Node.toProperties(CREATOR_PROPERTY, consenter));
+        for (Node node : search) {
+            Consent consent = new Consent();
+            consent.setConsenter(consenter);
+
+            // all consent info is stored in the properties of the consent node
+            Map<String, String> properties = node.getProperties();
+
+            String consentee = properties.get(CONSENTEE_PROPERTY);
+            consent.setConsentee(consentee);
+            String creator = properties.get(CREATOR_PROPERTY);
+            consent.setCreator(creator);
 
             String permsStr = properties.get(PERMISSIONS_PROPERTY);
             String nodesStr = properties.get(NODES_PROPERTY);
@@ -189,6 +241,8 @@ public class ConsentPolicy {
 
             String consenter = properties.get(CONSENTER_PROPERTY);
             consent.setConsenter(consenter);
+            String creator = properties.get(CREATOR_PROPERTY);
+            consent.setCreator(creator);
 
             String permsStr = properties.get(PERMISSIONS_PROPERTY);
             String nodesStr = properties.get(NODES_PROPERTY);
@@ -249,8 +303,11 @@ public class ConsentPolicy {
         Map<Set<String>, Node> opsToProhibitionCont = new HashMap<>();
         for (Set<String> ops : prohibitions.keySet()) {
             // create an OA for all the conts
+            Map<String, String> props = Node.toProperties(CONSENTER_PROPERTY, consenter, CONSENTEE_PROPERTY, consentee,
+                    CREATOR_PROPERTY, userCtx.getUser());
+
             Node node = graph.createNode("prohibition-consent-container-" + consentee + "-" + ops,
-                    OA, Node.toProperties(CONSENTER_PROPERTY, consenter, CONSENTEE_PROPERTY, consentee), consentContainer.getName());
+                    OA, props, consentContainer.getName());
             opsToProhibitionCont.put(ops, node);
         }
 
@@ -276,20 +333,24 @@ public class ConsentPolicy {
             prohibitionList.add(prohibition);
         }
 
+        Map<String, String> props = Node.toProperties(
+                CONSENTEE_PROPERTY, consentee,
+                CONSENTER_PROPERTY, consenter,
+                PERMISSIONS_PROPERTY, String.join(",", permissions),
+                NODES_PROPERTY, String.join(",", nodes),
+                PROHIBITIONS_PROPERTY, prohibitionsStr,
+                CREATOR_PROPERTY, userCtx.getUser());
+
         Node uaNode = graph.createNode(
                 "consent-for-" + consentee + "-on-" + consenter + "_UA",
                 UA,
-                Node.toProperties(CONSENTEE_PROPERTY, consentee, CONSENTER_PROPERTY, consenter,
-                        PERMISSIONS_PROPERTY, String.join(",", permissions), NODES_PROPERTY, String.join(",", nodes),
-                        PROHIBITIONS_PROPERTY, prohibitionsStr),
+                props,
                 consentGroup.getName());
 
         Node oaNode = graph.createNode(
                 "consent-for-" + consentee + "-on-" + consenter + "_OA",
                 OA,
-                Node.toProperties(CONSENTEE_PROPERTY, consentee, CONSENTER_PROPERTY, consenter,
-                        PERMISSIONS_PROPERTY, String.join(",", permissions), NODES_PROPERTY, String.join(",", nodes),
-                        PROHIBITIONS_PROPERTY, prohibitionsStr),
+                props,
                 consentContainer.getName());
 
         // associate the ua and oa with the permissions

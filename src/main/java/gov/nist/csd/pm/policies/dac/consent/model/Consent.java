@@ -9,6 +9,7 @@ import java.util.Set;
 
 public class Consent {
 
+    private String creator;
     private String consenter;
     private String consentee;
     private OperationSet permissions;
@@ -19,6 +20,14 @@ public class Consent {
         permissions = new OperationSet();
         nodes = new HashSet<>();
         prohibitions = new HashSet<>();
+    }
+
+    public String getCreator() {
+        return creator;
+    }
+
+    public void setCreator(String creator) {
+        this.creator = creator;
     }
 
     public String getConsenter() {
