@@ -30,12 +30,14 @@ public class ConsentPolicy {
     private static final String PROHIBITIONS_PROPERTY = "prohibitions";
     public static final String REQUESTER_PROPERTY = "requester";
     public static final String USER_PROPERTY = "user";
+    public static final String GUARDIAN_PROPERTY = "guardian";
+    public static final String GUARDIAN_OF_PROPERTY = "guardian_of";
 
-    private Graph graph;
+    private PDP pdp;
     private Prohibitions prohibitions;
 
-    public ConsentPolicy(PDP pdp, UserContext userContext) {
-        this.graph = pdp.getGraphService(userContext);
+    public ConsentPolicy(PDP pdp) {
+        this.pdp = pdp;
         this.prohibitions = pdp.getProhibitionsService(new UserContext("super", ""));
     }
 
@@ -43,36 +45,62 @@ public class ConsentPolicy {
         return "for-" + consenter + "-deny-" + consentee + "-" + permissions + "-on-" + conts;
     }
 
-    public void createConsentRequest(String requester, String user, List<String> permissions) throws PMException {
-        // get the access request container for the user
-        Node accessRequests = graph.getNode(OA, Node.toProperties("access_requests", user, "type", "requests"));
+    public void createConsentRequest(UserContext userCtx, String requester, String user, List<String> permissions) throws PMException {
+        Graph graph = pdp.getGraphService(userCtx);
 
+        Node accessRequestsNode;
+        Map<String, String> props = Node.toProperties(
+                "type", "access_request",
+                "requester", requester,
+                "user", user,
+                "permissions", String.join(",", permissions)
+        );
+
+        // get the user node and check if they have the guardian property
+        Node node = graph.getNode(user);
+        if (node.getProperties().containsKey(GUARDIAN_PROPERTY)) {
+            String guardian = node.getProperties().get(GUARDIAN_PROPERTY);
+
+            // get the access request container for the guardian
+            accessRequestsNode = graph.getNode(OA, Node.toProperties("access_requests", node.getProperties().get(GUARDIAN_PROPERTY), "type", "requests"));
+
+            // add a property to the request to denote it is going to the guardian
+            props.put(GUARDIAN_PROPERTY, guardian);
+        } else {
+            // get the access request container for the user
+            accessRequestsNode = graph.getNode(OA, Node.toProperties("access_requests", user, "type", "requests"));
+        }
+
+        // create the request node
         graph.createNode("request_" + requester + "_" + permissions + "_" + user,
                 OA,
-                Node.toProperties(
-                        "type", "access_request",
-                        "requester", requester,
-                        "user", user,
-                        "permissions", String.join(",", permissions)
-                ),
-                accessRequests.getName());
+                props,
+                accessRequestsNode.getName());
     }
 
-    public List<ConsentRequest> getSentRequests(String requester) throws PMException {
-        return getRequests(Node.toProperties(
+    public List<ConsentRequest> getSentRequests(UserContext userCtx, String requester) throws PMException {
+        return getRequests(userCtx, Node.toProperties(
                 REQUESTER_PROPERTY, requester,
                 "type", "access_request")
         );
     }
 
-    public List<ConsentRequest> getReceivedRequests(String user) throws PMException {
-        return getRequests(Node.toProperties(
+    public List<ConsentRequest> getReceivedRequests(UserContext userCtx, String user) throws PMException {
+        List<ConsentRequest> requests = getRequests(userCtx, Node.toProperties(
                 USER_PROPERTY, user,
                 "type", "access_request")
         );
+
+        requests.addAll(getRequests(userCtx,
+                Node.toProperties("type", "access_request", GUARDIAN_PROPERTY, user)
+        ));
+
+        return requests;
     }
 
-    private List<ConsentRequest> getRequests(Map<String, String> properties) throws PMException {
+    private List<ConsentRequest> getRequests(UserContext userCtx, Map<String, String> properties) throws PMException {
+        Graph graph = pdp.getGraphService(userCtx);
+
         Set<Node> search = graph.search(OA, properties);
 
         List<ConsentRequest> requests = new ArrayList<>();
@@ -96,11 +124,13 @@ public class ConsentPolicy {
     }
 
     /**
-     * get the consents that the given target is the target of.
+     * get the consent policies that the given target is the target of.
      * @param consenter the target of the consents to return
      * @return
      */
-    public List<Consent> getSentPolicies(String consenter) throws PMException {
+    public List<Consent> getSentPolicies(UserContext userCtx, String consenter) throws PMException {
+        Graph graph = pdp.getGraphService(userCtx);
+
         List<Consent> consents = new ArrayList<>();
         // search for OA nodes with property consent=target
         Set<Node> search = graph.search(OA, Node.toProperties(CONSENTER_PROPERTY, consenter));
@@ -145,7 +175,9 @@ public class ConsentPolicy {
      * @param consentee the user that has received the consent policies
      * @return the set of consents the consentee has received
      */
-    public List<Consent> getReceivedPolicies(String consentee) throws PMException {
+    public List<Consent> getReceivedPolicies(UserContext userCtx, String consentee) throws PMException {
+        Graph graph = pdp.getGraphService(userCtx);
+
         List<Consent> consents = new ArrayList<>();
         Set<Node> search = graph.search(OA, Node.toProperties(CONSENTEE_PROPERTY, consentee));
         for (Node node : search) {
@@ -198,8 +230,11 @@ public class ConsentPolicy {
      * @param nodes the nodes to give consent on. Can be O or OA
      * @param prohibitions a set of containers that are prohibited grouped by similar permissions (i.e. read,write -> cont1, cont2)
      */
-    public void giveConsent(String consenter, String consentee, OperationSet permissions, Set<String> nodes, Map<Set<String>, Set<String>> prohibitions) throws PMException {
-        revokeConsent(consenter, consentee);
+    public void giveConsent(UserContext userCtx, String consenter, String consentee, OperationSet permissions, Set<String> nodes, Map<Set<String>, Set<String>> prohibitions) throws PMException {
+        Graph graph = pdp.getGraphService(userCtx);
+
+        // revoke an existing consent
+        revokeConsent(userCtx, consenter, consentee);
 
         // create the UA and OA
         // get the consenter consent group and container
@@ -274,7 +309,9 @@ public class ConsentPolicy {
         }
     }
 
-    public void revokeConsent(String consenter, String consentee) throws PMException {
+    public void revokeConsent(UserContext userCtx, String consenter, String consentee) throws PMException {
+        Graph graph = pdp.getGraphService(userCtx);
+
         // delete the UA and OA with consenter and consentee props
         Set<Node> search = graph.search(null, Node.toProperties(CONSENTER_PROPERTY, consenter, CONSENTEE_PROPERTY, consentee));
         for (Node node : search) {
