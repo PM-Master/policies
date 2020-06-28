@@ -175,26 +175,27 @@ public class ConsentPolicy {
 
     /**
      * get the consent policies that the given user created
-     * @param consenter the target of the consents to return
-     * @return
+     * @param creator the use who created the policy
+     * @return the list of consent policies the given user is the creator of
      */
-    public List<Consent> getSentCreatorPolicies(UserContext userCtx, String consenter) throws PMException {
+    public List<Consent> getSentCreatorPolicies(UserContext userCtx, String creator) throws PMException {
         Graph graph = pdp.getGraphService(userCtx);
 
         List<Consent> consents = new ArrayList<>();
         // search for OA nodes with property consent=target
-        Set<Node> search = graph.search(OA, Node.toProperties(CREATOR_PROPERTY, consenter));
+        Set<Node> search = graph.search(OA, Node.toProperties(CREATOR_PROPERTY, creator));
         for (Node node : search) {
             Consent consent = new Consent();
-            consent.setConsenter(consenter);
+            consent.setCreator(creator);
 
             // all consent info is stored in the properties of the consent node
             Map<String, String> properties = node.getProperties();
 
+
             String consentee = properties.get(CONSENTEE_PROPERTY);
             consent.setConsentee(consentee);
-            String creator = properties.get(CREATOR_PROPERTY);
-            consent.setCreator(creator);
+            String consenter = properties.get(CONSENTER_PROPERTY);
+            consent.setConsenter(consenter);
 
             String permsStr = properties.get(PERMISSIONS_PROPERTY);
             String nodesStr = properties.get(NODES_PROPERTY);
