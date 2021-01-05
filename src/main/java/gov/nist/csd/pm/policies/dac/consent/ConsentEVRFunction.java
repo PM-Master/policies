@@ -10,8 +10,10 @@ import gov.nist.csd.pm.pdp.PDP;
 import gov.nist.csd.pm.pdp.services.UserContext;
 import gov.nist.csd.pm.pip.graph.Graph;
 import gov.nist.csd.pm.pip.graph.model.nodes.Node;
+import gov.nist.csd.pm.pip.obligations.Obligations;
 import gov.nist.csd.pm.pip.obligations.evr.EVRException;
 import gov.nist.csd.pm.pip.obligations.model.functions.Function;
+import gov.nist.csd.pm.pip.prohibitions.Prohibitions;
 
 import static gov.nist.csd.pm.operations.Operations.ALL_OPS;
 import static gov.nist.csd.pm.pip.graph.model.nodes.NodeType.OA;
@@ -30,7 +32,7 @@ public class ConsentEVRFunction implements FunctionExecutor {
     }
 
     @Override
-    public Object exec(UserContext userContext, EventContext eventCtx, PDP pdp, Function function, FunctionEvaluator functionEvaluator) throws PMException {
+    public Object exec(Graph graph, Prohibitions prohibitions, Obligations obligations, EventContext eventCtx, Function function, FunctionEvaluator functionEvaluator) throws PMException {
         if (!(eventCtx instanceof AssignToEvent)) {
             throw new EVRException("config_consent expected an AssignToEvent but got " + eventCtx.getClass());
         }
@@ -40,7 +42,6 @@ public class ConsentEVRFunction implements FunctionExecutor {
 
         // create the consent configuration for this user -- ths user has already been assigned to dac_users and dac_users2
         // create a dac UA for this user
-        Graph graph = pdp.getGraphService(userContext);
         Node uaNode = graph.createNode(userNode.getName() + "_UA", UA, Node.toProperties("user", userNode.getName()), "DAC_default_UA");
 
         // assign user to UA

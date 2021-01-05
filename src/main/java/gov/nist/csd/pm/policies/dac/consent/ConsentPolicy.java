@@ -39,7 +39,7 @@ public class ConsentPolicy {
 
     public ConsentPolicy(PDP pdp) {
         this.pdp = pdp;
-        this.prohibitions = pdp.getProhibitionsService(new UserContext("super", ""));
+        this.prohibitions = pdp.withUser(new UserContext("super", "")).getProhibitions();
     }
 
     private String getDenyName(String consenter, String consentee, List<String> permissions, List<String> conts) {
@@ -47,7 +47,7 @@ public class ConsentPolicy {
     }
 
     public void createConsentRequest(UserContext userCtx, String requester, String user, List<String> permissions) throws PMException {
-        Graph graph = pdp.getGraphService(userCtx);
+        Graph graph = pdp.withUser(userCtx).getGraph();
 
         Node accessRequestsNode;
         Map<String, String> props = Node.toProperties(
@@ -100,7 +100,7 @@ public class ConsentPolicy {
     }
 
     private List<ConsentRequest> getRequests(UserContext userCtx, Map<String, String> properties) throws PMException {
-        Graph graph = pdp.getGraphService(userCtx);
+        Graph graph = pdp.withUser(userCtx).getGraph();
 
         Set<Node> search = graph.search(OA, properties);
 
@@ -130,7 +130,7 @@ public class ConsentPolicy {
      * @return
      */
     public List<Consent> getSentPolicies(UserContext userCtx, String consenter) throws PMException {
-        Graph graph = pdp.getGraphService(userCtx);
+        Graph graph = pdp.withUser(userCtx).getGraph();
 
         List<Consent> consents = new ArrayList<>();
         // search for OA nodes with property consent=target
@@ -179,7 +179,7 @@ public class ConsentPolicy {
      * @return the list of consent policies the given user is the creator of
      */
     public List<Consent> getSentCreatorPolicies(UserContext userCtx, String creator) throws PMException {
-        Graph graph = pdp.getGraphService(userCtx);
+        Graph graph = pdp.withUser(userCtx).getGraph();
 
         List<Consent> consents = new ArrayList<>();
         // search for OA nodes with property consent=target
@@ -229,7 +229,7 @@ public class ConsentPolicy {
      * @return the set of consents the consentee has received
      */
     public List<Consent> getReceivedPolicies(UserContext userCtx, String consentee) throws PMException {
-        Graph graph = pdp.getGraphService(userCtx);
+        Graph graph = pdp.withUser(userCtx).getGraph();
 
         List<Consent> consents = new ArrayList<>();
         Set<Node> search = graph.search(OA, Node.toProperties(CONSENTEE_PROPERTY, consentee));
@@ -286,7 +286,7 @@ public class ConsentPolicy {
      * @param prohibitions a set of containers that are prohibited grouped by similar permissions (i.e. read,write -> cont1, cont2)
      */
     public void giveConsent(UserContext userCtx, String consenter, String consentee, OperationSet permissions, Set<String> nodes, Map<Set<String>, Set<String>> prohibitions) throws PMException {
-        Graph graph = pdp.getGraphService(userCtx);
+        Graph graph = pdp.withUser(userCtx).getGraph();
 
         // revoke an existing consent
         revokeConsent(userCtx, consenter, consentee);
@@ -372,7 +372,7 @@ public class ConsentPolicy {
     }
 
     public void revokeConsent(UserContext userCtx, String consenter, String consentee) throws PMException {
-        Graph graph = pdp.getGraphService(userCtx);
+        Graph graph = pdp.withUser(userCtx).getGraph();
 
         // delete the UA and OA with consenter and consentee props
         Set<Node> search = graph.search(null, Node.toProperties(CONSENTER_PROPERTY, consenter, CONSENTEE_PROPERTY, consentee));
@@ -416,7 +416,7 @@ public class ConsentPolicy {
                         "      actions:\n" +
                         "        - function:\n" +
                         "            name: config_consent";
-        return EVRParser.parse(userCtx.getUser(), yaml);
+        return new EVRParser().parse(userCtx.getUser(), yaml);
     }
 
     public static FunctionExecutor getFunction() {
