@@ -31,7 +31,7 @@
         <dependency>
             <groupId>com.github.PM-Master</groupId>
             <artifactId>policy-machine-core</artifactId>
-            <version>3ab5259</version>
+            <version>abbfdf0</version>
         </dependency>
     </dependencies>
 </project>
